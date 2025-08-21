@@ -15,32 +15,68 @@ export default function LoginPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem("mock_token");
-    setIsLoggedIn(!!token);
+    let ignore = false;
+    async function checkSession() {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (!ignore) {
+          setIsLoggedIn(res.ok);
+        }
+      } catch {
+        if (!ignore) setIsLoggedIn(false);
+      }
+    }
+    checkSession();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  function handleLoginSubmit(e: FormEvent) {
+  async function handleLoginSubmit(e: FormEvent) {
     e.preventDefault();
-    // Mock auth: in real app, call your API and set a session/token
-    localStorage.setItem("mock_token", "ok");
-    setIsLoggedIn(true);
-    // Redirect to onboarding page
-    router.push("/onboarding");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Login failed");
+        return;
+      }
+      setIsLoggedIn(true);
+      router.push("/onboarding");
+    } catch {
+      alert("Network error. Please try again.");
+    }
   }
 
-  function handleSignupSubmit(e: FormEvent) {
+  async function handleSignupSubmit(e: FormEvent) {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert("Passwords don't match!");
       return;
     }
-    // Mock signup: in real app, call your API to create account
-    localStorage.setItem("mock_token", "ok");
-    localStorage.setItem("user_name", name);
-    setIsLoggedIn(true);
-    alert("Account created successfully! Redirecting to setup...");
-    router.push("/onboarding");
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, email, password }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Signup failed");
+        return;
+      }
+      setIsLoggedIn(true);
+      alert("Account created successfully! Redirecting to setup...");
+      router.push("/onboarding");
+    } catch {
+      alert("Network error. Please try again.");
+    }
   }
 
   function toggleForm() {

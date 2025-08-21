@@ -155,19 +155,32 @@ export default function OnboardingPage() {
     localStorage.removeItem(`${platform}_connection`);
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // Save user preferences to localStorage (in real app, save to database)
-    localStorage.setItem("user_interests", JSON.stringify(interests));
+    try {
+      const res = await fetch("/api/user/interests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ interests }),
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Please log in first.");
+          router.push("/login");
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to save interests");
+        return;
+      }
 
-    // Save connected accounts
-    localStorage.setItem(
-      "connected_accounts",
-      JSON.stringify(connectedAccounts)
-    );
+      // Optional: you could persist connectedAccounts via another endpoint later
 
-    // Redirect to dashboard
-    router.push("/dashboard");
+      router.push("/dashboard");
+    } catch {
+      alert("Network error. Please try again.");
+    }
   };
 
   return (
